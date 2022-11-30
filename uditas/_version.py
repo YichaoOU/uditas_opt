@@ -1,1 +1,1 @@
-__version__ = "1.0"
+__version__ = "opt-1.0"

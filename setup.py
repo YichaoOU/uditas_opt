@@ -22,8 +22,8 @@ setup(
         "console_scripts": ['uditas = uditas.uditas:main']
         },
     version = version,
-    description = "UDiTaS analysis software.",
+    description = "UDiTaS analysis software (Opt version)",
     long_description = long_descr,
-    author = "Editas Medicine, Inc",
-    url = "http://www.editasmedicine.com/",
+    author = "Yichao Li",
+    url = "https://github.com/YichaoOU/uditas_opt",
     )

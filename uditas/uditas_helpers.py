@@ -701,11 +701,11 @@ def create_amplicon_user(dir_sample, amplicon_info, file_genome_2bit, label,ampl
 		seq_cut1_cut2 = genome[amplicon_info['chr_guide_1']][int(cut1):int(cut2)]
 		seq_downstream = genome[amplicon_info['chr_guide_1']][int(cut2):end_coordinate]
 
-		amplicon_list.append(['wt'+label, seq_upstream + seq_cut1_cut2 + seq_downstream])
+		# amplicon_list.append(['wt'+label, seq_upstream + seq_cut1_cut2 + seq_downstream])
 		amplicon_list.append(['large_deletion'+label, seq_upstream + seq_downstream])
 		amplicon_list.append(['large_inversion'+label, seq_upstream + reverse_complement(seq_cut1_cut2) + seq_downstream])
-		amplicon_list.append(['1a_1a'+label, seq_upstream + reverse_complement(seq_upstream)])
-		amplicon_list.append(['2b_2b'+label, reverse_complement(seq_downstream) + seq_downstream])
+		# amplicon_list.append(['1a_1a'+label, seq_upstream + reverse_complement(seq_upstream)])
+		# amplicon_list.append(['2b_2b'+label, reverse_complement(seq_downstream) + seq_downstream])
 	elif reaction_type == 'double_cut_different_chromosomes':
 		# Case two guides on different chromosomes
 		if amplicon_info['strand_guide_1'] == '+':
@@ -742,19 +742,19 @@ def create_amplicon_user(dir_sample, amplicon_info, file_genome_2bit, label,ampl
 		seq_2a = genome[amplicon_info['chr_guide_2']][start_coordinate2:int(cut2)]
 		seq_2b = genome[amplicon_info['chr_guide_2']][int(cut2):end_coordinate2]
 
-		amplicon_list.append(['1a_1a'+label, seq_1a + reverse_complement(seq_1a)])
-		amplicon_list.append(['1a_1b'+label, seq_1a + seq_1b])
+		# amplicon_list.append(['1a_1a'+label, seq_1a + reverse_complement(seq_1a)])
+		# amplicon_list.append(['1a_1b'+label, seq_1a + seq_1b])
 		amplicon_list.append(['1a_2a'+label, seq_1a + reverse_complement(seq_2a)])
 		amplicon_list.append(['1a_2b'+label, seq_1a + seq_2b])
 
-		amplicon_list.append(['1b_1b'+label, reverse_complement(seq_1b) + seq_1b])
+		# amplicon_list.append(['1b_1b'+label, reverse_complement(seq_1b) + seq_1b])
 		amplicon_list.append(['2a_1b'+label, seq_2a + seq_1b])
 		amplicon_list.append(['2b_1b'+label, reverse_complement(seq_2b) + seq_1b])
 
-		amplicon_list.append(['2a_2a'+label, seq_2a + reverse_complement(seq_2a)])
-		amplicon_list.append(['2a_2b'+label, seq_2a + seq_2b])
+		# amplicon_list.append(['2a_2a'+label, seq_2a + reverse_complement(seq_2a)])
+		# amplicon_list.append(['2a_2b'+label, seq_2a + seq_2b])
 
-		amplicon_list.append(['2b_2b'+label, reverse_complement(seq_2b) + seq_2b])
+		# amplicon_list.append(['2b_2b'+label, reverse_complement(seq_2b) + seq_2b])
 
 	return amplicon_list
 	
@@ -1279,7 +1279,7 @@ def align_genome_local(dir_sample, amplicon_info, assembly, check_plasmid_insert
 					   '-X', '5000', '-k', '2', '-x', assembly,
 					   '-1', file_R1, '-2', file_R2,
 					   '-S', file_sam_genome_local]
-	'''
+	# '''
 	handle_sam_report_genome_local = open(file_sam_report_genome_local, 'wb')
 	
 	subprocess.call(bowtie2_command, stderr=handle_sam_report_genome_local)
@@ -1305,20 +1305,20 @@ def align_genome_local(dir_sample, amplicon_info, assembly, check_plasmid_insert
 	# Create bam index files
 	create_bam_genome_local_index_command = ['samtools', 'index', file_sorted_bam_genome_local]
 	subprocess.call(create_bam_genome_local_index_command)
-	'''
+	# '''
 	# add socrates
 	return_value=""
 	if socrates_path != "":
-		# create_SV_prediction_command = ['java','-Xmx16g','-jar',socrates_path,'-t',str(ncpu),'--keep-duplicates',os.environ.get('BOWTIE2_INDEXES')+assembly,file_sorted_bam_genome_local]
-		# print ("RUNNING SV prediction")
-		# SV_err = os.path.dirname(file_sorted_bam_genome_local) + "/socrates.err"
-		# SV_out = os.path.dirname(file_sorted_bam_genome_local) + "/socrates.out"
-		# SV_err_handle = open(SV_err, 'wb')
-		# SV_out_handle = open(SV_out, 'wb')
-		# print (" ".join(create_SV_prediction_command))
-		# subprocess.call(create_SV_prediction_command,cwd=os.path.dirname(file_sorted_bam_genome_local),stderr=SV_err_handle,stdout=SV_out_handle)
-		# SV_err_handle.close()
-		# SV_out_handle.close()
+		create_SV_prediction_command = ['java','-Xmx16g','-jar',socrates_path,'-t',str(ncpu),'--keep-duplicates',os.environ.get('BOWTIE2_INDEXES')+assembly,file_sorted_bam_genome_local]
+		print ("RUNNING SV prediction")
+		SV_err = os.path.dirname(file_sorted_bam_genome_local) + "/socrates.err"
+		SV_out = os.path.dirname(file_sorted_bam_genome_local) + "/socrates.out"
+		SV_err_handle = open(SV_err, 'wb')
+		SV_out_handle = open(SV_out, 'wb')
+		print (" ".join(create_SV_prediction_command))
+		subprocess.call(create_SV_prediction_command,cwd=os.path.dirname(file_sorted_bam_genome_local),stderr=SV_err_handle,stdout=SV_out_handle)
+		SV_err_handle.close()
+		SV_out_handle.close()
 		try:
 			return_value = glob.glob("%s/results_Socrates_paired*txt"%(os.path.dirname(file_sorted_bam_genome_local)))[0]
 		except:

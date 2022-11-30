@@ -11,6 +11,8 @@ Optimized version of the original UDITAS program: https://github.com/editasmedic
 
 4. Modified `cutadapt` parameters `-m 20`.
 
+5. `sample_info.csv`, each sample needs to have 2 gRNA locations.
+
 
 # Note to usage
 
@@ -44,4 +46,4 @@ sample_info_filename = os.path.join(dir_sample, 'sample_info.csv')
 
 6. For unmapped reads,  `extract_unmapped_reads_amplicons` -> `analyze_alignments_genome_global` to identify mis-priming. Not sure why do they use global mapping.
 
-7. Summary of everything is in this file `results_combined_detailed.xlsx`
+7. Summary of everything is in this file `results_summary_pivot.xlsx`

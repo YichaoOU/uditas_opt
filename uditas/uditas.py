@@ -8,15 +8,15 @@ from __future__ import print_function
 
 import pandas as pd
 
-# from . import uditas_helpers
-import uditas_helpers
+from . import uditas_helpers
+# import uditas_helpers
 
 import argparse
 
 import os
 
-# from ._version import __version__
-__version__="1.0"
+from ._version import __version__
+# __version__="1.0"
 
 # Metadata
 __author__ = "Yichao Li"
@@ -26,7 +26,7 @@ __author__ = "Yichao Li"
 
 def main():
 	# Parse command line options
-	parser = argparse.ArgumentParser(description='Process UDiTaS data',
+	parser = argparse.ArgumentParser(description='Process UDiTaS data. Version:%s'%(__version__),
 									 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 	parser.add_argument("dir_sample", help='Directory with the sample to be processed')
@@ -152,7 +152,7 @@ def main():
 			else:
 				amplicon_list=[] # [[name,seq],[name,seq],...]
 				for _,row in breaksites_df.iterrows():
-					label = "_".join([str(rowitem) for rowitem in row])
+					label = "_"+"_".join([str(rowitem) for rowitem in row])
 					tmp_amplicon_info = {
 						"chr_guide_1":row[0],
 						"strand_guide_1":row[2],
