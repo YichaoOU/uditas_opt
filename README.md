@@ -61,7 +61,7 @@ sample_info_filename = os.path.join(dir_sample, 'sample_info.csv')
 
 3. Then reads are local aligned to the genome, what is the alignment rate, should > 90%. See `multiqc_report.html`.
 
-4. Then reads are mapped to the amplicons, what is the percentange of junction reads? What is the total number of junction reads, ideally, total junction reads after UMI collapse should > 10k.
+4. Then reads are mapped to the amplicons, what is the total number of junction reads? See `reports/total_collapsed_junction_reads.csv`. What is the frequencies of each SV? See `reports/SV_frequency.csv`
 
 5. For reads that can't be mapped to the amplicons, they are global aligned to the genome, the mapping rate is an indicator for mis-priming events. See `multiqc_report.html`.
 
