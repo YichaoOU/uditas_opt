@@ -1047,7 +1047,7 @@ def align_plasmid_local(dir_sample, amplicon_info, ncpu=4):
 
 	file_sam_plasmid_local = create_filename(dir_sample, N7, N5, 'sam_plasmid_local')
 	file_sam_report_plasmid_local = create_filename(dir_sample, N7, N5, 'sam_report_plasmid_local')
-
+	file_sam_report_plasmid_local = file_sam_report_plasmid_local.replace(".sam.report.txt","_plasmid_local.sam.report.txt")
 	if not os.path.exists(os.path.dirname(file_sam_plasmid_local)):
 		os.mkdir(os.path.dirname(file_sam_plasmid_local))
 
@@ -1261,7 +1261,7 @@ def align_genome_local(dir_sample, amplicon_info, assembly, check_plasmid_insert
 
 	file_sam_genome_local = create_filename(dir_sample, N7, N5, 'sam_genome_local')
 	file_sam_report_genome_local = create_filename(dir_sample, N7, N5, 'sam_report_genome_local')
-
+	file_sam_report_genome_local = file_sam_report_genome_local.replace(".sam.report.txt","_genome_local.sam.report.txt")
 	if not os.path.exists(os.path.dirname(file_sam_genome_local)):
 		os.mkdir(os.path.dirname(file_sam_genome_local))
 
@@ -1429,6 +1429,7 @@ def align_amplicon(dir_sample, amplicon_info, check_plasmid_insertions, ncpu=4):
 
 	file_sam_amplicons = create_filename(dir_sample, N7, N5, 'sam_amplicons')
 	file_sam_report_amplicons = create_filename(dir_sample, N7, N5, 'sam_report_amplicons')
+	file_sam_report_amplicons = file_sam_report_amplicons.replace(".sam.report.txt","_all_amplicon.sam.report.txt")
 
 	if not os.path.exists(os.path.dirname(file_sam_amplicons)):
 		os.mkdir(os.path.dirname(file_sam_amplicons))
@@ -1445,7 +1446,7 @@ def align_amplicon(dir_sample, amplicon_info, check_plasmid_insertions, ncpu=4):
 
 	os.chdir(folder_amplicons)
 	bowtie2_command = ['bowtie2', '-p', str(ncpu), '--very-sensitive',
-					   '-X', '5000', '-k', '2', '-x', 'amplicons',
+					   '-X', '5000', '-k','2', '-x', 'amplicons',
 					   '-1', file_R1, '-2', file_R2,
 					   '-S', file_sam_amplicons]
 
@@ -1571,7 +1572,7 @@ def get_intersection(region1_begin, region1_end, region2_begin, region2_end):
 #  bam_file:			   alignments file to process
 #
 ################################################################################
-def find_indels(bam_file, strand, region_chr, region_start, region_end, UMI_dict, min_MAPQ, min_AS):
+def find_indels(bam_file, strand, region_chr, region_start, region_end, UMI_dict, min_MAPQ, min_AS,prefix):
 	bam_in_alignment_file = pysam.AlignmentFile(bam_file, 'rb')
 
 	# We get the reads that overlap the window in which we make the counts
@@ -1579,11 +1580,13 @@ def find_indels(bam_file, strand, region_chr, region_start, region_end, UMI_dict
 	# For UDiTaS, care must be take to ensure that the read covers the whole window, some short reads may cover just
 	# one side of the window, depending on the direction of the UDiTaS primer
 	bam_in = bam_in_alignment_file.fetch(region_chr, region_start, region_end)
-
+	# print ("find_indels",region_chr,region_start,region_end)
 	names_list = []
 	position_list = []
 	indel_list = []
 	UMI_list = []
+	read_start = []
+	read_end = []
 	for read in bam_in:
 		# We add here a check to make sure the read came from the primer, crossed the cut and covered the whole window
 		if read.has_tag('AS'):
@@ -1592,7 +1595,7 @@ def find_indels(bam_file, strand, region_chr, region_start, region_end, UMI_dict
 		if not read.is_unmapped and (((read.reference_start < region_start) and
 				 (read.reference_end > region_end)) and
 					read.mapping_quality >= min_MAPQ and
-					read_AS >= min_AS and  not read.is_secondary):
+					read_AS >= min_AS):
 			read_indels = parse_indels(read)
 			# if no indels found, write 0
 			if len(read_indels) == 0:
@@ -1608,12 +1611,18 @@ def find_indels(bam_file, strand, region_chr, region_start, region_end, UMI_dict
 
 				indel_list.append(indel)
 				UMI_list.append(UMI_dict[read.query_name][0])
-
+				read_start.append(read.reference_start)
+				read_end.append(read.reference_end)
 	df = pd.DataFrame({'read_name': names_list,
 					   'position': position_list,
 					   'indel': indel_list,
+					   'read_start': read_start,
+					   'region_start': region_start,
+					   'region_end': region_end,
+					   'read_end': read_end,
+					   'prefix': prefix,
 					   'UMI': UMI_list})
-
+	df.to_csv(bam_file+"."+prefix+".amplicon_mapping.tsv",sep="\t",index=False)
 	df['position_end'] = df.position + np.abs(df.indel)
 
 	overlap = [get_intersection(df.loc[index]['position'], df.loc[index]['position_end'], region_start, region_end)
@@ -1675,7 +1684,7 @@ def create_segments(iter1, bam_in, min_MAPQ):
 def analyze_fragment_sizes(dir_sample, amplicon_info, min_MAPQ):
 	N7 = amplicon_info['index_I1']
 	N5 = amplicon_info['index_I2']
-	file_sorted_bam_amplicons = create_filename(dir_sample, N7, N5, 'sorted_bam_amplicons')
+	file_sorted_bam_amplicons = create_filename(dir_sample, N7, N5, 'sorted_bam_amplicons')+".correct.bam"
 
 	# Section to plot
 	file_figure_classes = (create_filename(dir_sample, N7, N5, 'results_amplicons') + '_fragment_sizes_classes.pdf')
@@ -1856,17 +1865,18 @@ def analyze_alignments(dir_sample, amplicon_info, window_size, amplicon_window_a
 			cut = cut_df.loc[i, 'cut_type']
 			cut_position = cut_df.loc[i, 'cut_position']
 			region_chr = record.name
-
-			region_start = cut_position - window_size
-			region_end = cut_position + window_size + 1
-
-			results = find_indels(file_sorted_bam_amplicons, strand, region_chr, region_start, region_end, UMI_dict,
-								  min_MAPQ, min_AS)
-			# This is to catch the control case, no cut there
+			region_chr = record.name
 			if len(cut) > 0:
 				prefix = region_chr + '_' + cut
 			else:
 				prefix = region_chr
+			region_start = cut_position - window_size
+			region_end = cut_position + window_size + 1
+
+			results = find_indels(file_sorted_bam_amplicons, strand, region_chr, region_start, region_end, UMI_dict,
+								  min_MAPQ, min_AS,prefix)
+			# This is to catch the control case, no cut there
+
 
 			results_df[prefix + '_total_reads'] = [results[0]]
 			results_df[prefix + '_total_indels'] = [results[1]]
@@ -1879,10 +1889,54 @@ def analyze_alignments(dir_sample, amplicon_info, window_size, amplicon_window_a
 
 	median_size = analyze_fragment_sizes(dir_sample, amplicon_info, min_MAPQ)
 	results_df['median_fragment_size'] = [median_size]
-
+	
+	# new code
+	UMI_collapse_junction_read = get_amplicon_mapped_junction_reads(os.path.dirname(file_sorted_bam_amplicons))
+	out_file = os.path.join(exp_dir, 'UMI_collapse_junction_read.csv')
+	UMI_collapse_junction_read.to_csv(out_file,index=False)
+	
 	results_df.to_excel(results_file)
 	return results_df
 
+def rank_amplicon(s):
+    """order the amplicon names to remove multi-mapped reads
+
+    """
+    if "wt_cut" in s:
+        return 0
+    if "wt1_cut" in s:
+        return 0
+    if "wt2_cut" in s:
+        return 0
+    if "1a_1a_cut" in s:
+        return 1
+    if "1b_1b_cut" in s:
+        return 1
+    if "large_deletion_cut" in s:
+        return 1
+    if "large_inversion_cut" in s:
+        return 1
+    if "1a_2a_cut" in s:
+        return 1
+    if "1a_2b_cut" in s:
+        return 1
+    if "2a_1b_cut" in s:
+        return 1    
+    if "2b_1b_cut" in s:
+        return 1    
+    return 2
+def get_amplicon_mapped_junction_reads(myDir):
+	files = glob.glob("%s/*amplicon_mapping.tsv"%(myDir))
+	df = pd.concat([pd.read_csv(f,sep="\t") for f in files])
+	df['amplicon_order'] = df.prefix.apply(rank_amplicon)
+	df = df.sort_values("amplicon_order")
+	df2 = df.drop_duplicates("read_name")
+	df3 = df2.drop_duplicates("UMI")
+	df4 = df3.groupby("prefix").size().sort_values().reset_index()
+	df4[1] = df4[0]/df4[0].sum()
+	df4.columns = ['amplicon','#collapsed_read_count',"frequency"]
+	df4['sample'] = files[0].split("/")[-1].split(".sorted.bam")[0]
+	return df4
 
 ################################################################################
 # Function to calculate the number of reads and collapsed reads aligned to the reference amplicons
@@ -1998,6 +2052,7 @@ def align_genome_global(dir_sample, amplicon_info, assembly, ncpu=4):
 
 	file_sam_genome_global = create_filename(dir_sample, N7, N5, 'sam_genome_global')
 	file_sam_report_genome_global = create_filename(dir_sample, N7, N5, 'sam_report_genome_global')
+	file_sam_report_genome_global = file_sam_report_genome_global.replace(".sam.report.txt","_genome_global.sam.report.txt")
 
 	if not os.path.exists(os.path.dirname(file_sam_genome_global)):
 		os.mkdir(os.path.dirname(file_sam_genome_global))

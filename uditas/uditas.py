@@ -10,7 +10,7 @@ import pandas as pd
 
 from . import uditas_helpers
 # import uditas_helpers
-
+import glob
 import argparse
 
 import os
@@ -51,12 +51,12 @@ def main():
 						help=('Skip plasmid alignment? Note, just alignment. ' +
 							  'Counts still evaluated. Options: 0, 1 (skip)'),
 						default=0)
-	parser.add_argument("-ncpu", help='Number of CPUs to use', default=4)
+	parser.add_argument("-ncpu", help='Number of CPUs to use', default=8)
 	parser.add_argument("-window_size", help='Window size around cut sites used to grab UDiTaS reads', default=15)
 	parser.add_argument("-default_amplicon_window_around_cut",
 						help='Window size around cut sites used to create amplicons',
 						default=1000)
-	parser.add_argument("-min_MAPQ", help='Minimum mapping quality to include a read', default=5)
+	parser.add_argument("-min_MAPQ", help='Minimum mapping quality to include a read', default=0)
 	parser.add_argument("-min_AS", help='Minimum alignment score to include a read', default=-180)
 	parser.add_argument("-process_AMP_seq_run", help='Set to 1 to process an AMP-seq run using GUIDE-seq adapters', default=0)
 	# new parameters
@@ -65,12 +65,13 @@ def main():
 	parser.add_argument("-breaksites", help='A list of breaksites to quantify occurrences, if provided, will skip running socrates. TSV format, 6 columns, gRNA_chr, gRNA_cutpos, gRNA_strand, chr, pos, strand', default=None)
 	parser.add_argument("-amplicon_fasta", help='force the program to use this amplicon fasta file', default=None)
 
-
+	parser.add_argument("-only_summarize", help='only_summarize? Options: 0 (skip), 1 ', default=0)
 	args = parser.parse_args()
 
 	dir_sample = os.path.abspath(os.path.join(os.getcwd(), args.dir_sample))
 	folder_genome_2bit = args.folder_genome_2bit
 	skip_demultiplexing = int(args.skip_demultiplexing)
+	only_summarize = int(args.only_summarize)
 	skip_trimming = int(args.skip_trimming)
 	skip_genome_local_alignment = int(args.skip_genome_local_alignment)
 	skip_genome_global_alignment = int(args.skip_genome_global_alignment)
@@ -93,14 +94,30 @@ def main():
 		force_flag = True
 		force_amplicon_list = []
 	print('\nUDiTaS version ' + __version__)
+	sample_info_filename = os.path.join(dir_sample, 'sample_info.csv')
+				 
+										 
 
+	experiments = pd.read_csv(sample_info_filename)
+	experiments = experiments.dropna(how='all')
+	
+	if only_summarize == 1:
+		myDIR = os.path.join(dir_sample, 'reports')
+		files = glob.glob("%s/*/UMI_collapse_junction_read.csv"%(dir_sample))
+		df = pd.concat([pd.read_csv(f) for f in files])
+		df.to_csv("%s/SV_frequency.csv"%(myDIR),index=False)
+		print ("FILE reports/SV_frequency.csv generated. Exit...")
+		exit()
+		
+		
+		
+		
+		
 	# Call to demultiplexing step
 	if skip_demultiplexing == 0:
 		uditas_helpers.demultiplex(dir_sample)
 
-	sample_info_filename = os.path.join(dir_sample, 'sample_info.csv')
 
-	experiments = pd.read_csv(sample_info_filename)
 	read_count = pd.DataFrame()
 	# Make list of samples to process
 	processing_all_amplicons = (process_amplicon == 'all')
@@ -115,6 +132,10 @@ def main():
 		amplicon_info = experiments.loc[i]
 		print ("Processing",amplicon_info['Sample'],amplicon_info['index_I1'],amplicon_info['index_I2'])
 		assembly = amplicon_info['genome']
+		N7 = amplicon_info['index_I1']
+		N5 = amplicon_info['index_I2']
+		mainfolder = uditas_helpers.create_filename(dir_sample, N7, N5, "mainfolder")
+		print ("mainfolder",mainfolder)
 		file_genome_2bit = os.path.join(folder_genome_2bit, assembly + '.2bit')
 		if skip_trimming == 0:
 			uditas_helpers.trim_fastq(dir_sample, amplicon_info, process_AMP_seq_run)
@@ -184,7 +205,7 @@ def main():
 		result_reads_in_all_amplicons_df.index = [i]
 
 		results_alignments_junction = pd.concat([result_amplicon_df, result_plasmid_df], axis=1)
-
+		# results_alignments_junction.to_csv(mainfolder+"/results_alignments_junction.csv")
 		if processing_all_amplicons:
 			try:
 				all_results_alignments_junction = pd.concat([all_results_alignments_junction,
@@ -223,7 +244,7 @@ def main():
 																		   read_count.loc[[i]], result_plasmid_df,
 																		   result_reads_in_all_amplicons_df,
 																		   results_genome_global_df)
-
+		# summary_all_alignments.to_csv(mainfolder+"/summary_all_alignments.csv")
 		try:
 			all_samples_summary_alignments = pd.concat([all_samples_summary_alignments, summary_all_alignments], axis=0)
 		except NameError:  # Initialize

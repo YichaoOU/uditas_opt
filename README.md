@@ -13,6 +13,11 @@ Optimized version of the original UDITAS program: https://github.com/editasmedic
 
 5. `sample_info.csv`, each sample needs to have 2 gRNA locations.
 
+6. `min_MAPQ` default set to 0 because HBG1/HBG2 multiple alignments. `not read.is_secondary` requirement is removed in `find_indel` function for each amplicon because reads that can be mapped to both wt and other amplicons (due to HBG1/HBG2 duplication, wt sequence is almost identical to large deletion sequence) may have `is_secondary` flag in wt reads, in this case, it would be removed from analysis and thus we would over-estimate the editing outcomes.
+
+7. Enhanced documentation.
+
+8. A naive parallelization.
 
 # Note to usage
 
@@ -47,3 +52,16 @@ sample_info_filename = os.path.join(dir_sample, 'sample_info.csv')
 6. For unmapped reads,  `extract_unmapped_reads_amplicons` -> `analyze_alignments_genome_global` to identify mis-priming. Not sure why do they use global mapping.
 
 7. Summary of everything is in this file `results_summary_pivot.xlsx`
+
+# Basic QC
+
+1. Raw reads are first demultiplexed, the overall demultiplexing rate should > 90%. See `reports/report_overall.xls`.
+
+2. Then reads are trimmed, how many reads are left? See `multiqc_report.html`.
+
+3. Then reads are local aligned to the genome, what is the alignment rate, should > 90%. See `multiqc_report.html`.
+
+4. Then reads are mapped to the amplicons, what is the percentange of junction reads? What is the total number of junction reads, ideally, total junction reads after UMI collapse should > 10k.
+
+5. For reads that can't be mapped to the amplicons, they are global aligned to the genome, the mapping rate is an indicator for mis-priming events. See `multiqc_report.html`.
+
