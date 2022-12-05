@@ -107,7 +107,7 @@ def main():
 		df = pd.concat([pd.read_csv(f) for f in files])
 		df.to_csv("%s/SV_frequency.csv"%(myDIR),index=False)
 		df = df.groupby('sample').sum()[['#collapsed_read_count']].sort_values('#collapsed_read_count',ascending=False)
-		df.to_csv("%s/total_collapsed_junction_reads.csv"%(myDIR),index=False)
+		df.to_csv("%s/total_collapsed_junction_reads.csv"%(myDIR))
 		print ("FILE reports/SV_frequency.csv generated. Exit...")
 		exit()
 		
