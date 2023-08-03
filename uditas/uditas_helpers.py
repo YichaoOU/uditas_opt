@@ -1446,7 +1446,7 @@ def align_amplicon(dir_sample, amplicon_info, check_plasmid_insertions, ncpu=4):
 
 	os.chdir(folder_amplicons)
 	bowtie2_command = ['bowtie2', '-p', str(ncpu), '--very-sensitive',
-					   '-X', '5000', '-k','2', '-x', 'amplicons',
+					   '-X', '5000', '-k','5', '-x', 'amplicons',
 					   '-1', file_R1, '-2', file_R2,
 					   '-S', file_sam_amplicons]
 
@@ -1540,7 +1540,8 @@ def create_barcode_dict(filename):
 def parse_indels(aligned_read):
 	indels = []
 
-	if not aligned_read.is_unmapped and not aligned_read.is_secondary:  # We only look at primary alignments
+	# if not aligned_read.is_unmapped and not aligned_read.is_secondary:  # We only look at primary alignments
+	if not aligned_read.is_unmapped:  # Remove is_secondary constraint
 		ref_i = aligned_read.reference_start
 		for operation, length in aligned_read.cigartuples:
 			if operation == 0:
@@ -1587,6 +1588,7 @@ def find_indels(bam_file, strand, region_chr, region_start, region_end, UMI_dict
 	UMI_list = []
 	read_start = []
 	read_end = []
+	AS_list = []
 	for read in bam_in:
 		# We add here a check to make sure the read came from the primer, crossed the cut and covered the whole window
 		if read.has_tag('AS'):
@@ -1610,6 +1612,7 @@ def find_indels(bam_file, strand, region_chr, region_start, region_end, UMI_dict
 					position_list.append(int(pos))
 
 				indel_list.append(indel)
+				AS_list.append(read_AS)
 				UMI_list.append(UMI_dict[read.query_name][0])
 				read_start.append(read.reference_start)
 				read_end.append(read.reference_end)
@@ -1621,10 +1624,11 @@ def find_indels(bam_file, strand, region_chr, region_start, region_end, UMI_dict
 					   'region_end': region_end,
 					   'read_end': read_end,
 					   'prefix': prefix,
+					   'AS': AS_list,
 					   'UMI': UMI_list})
-	df.to_csv(bam_file+"."+prefix+".amplicon_mapping.tsv",sep="\t",index=False)
+	
 	df['position_end'] = df.position + np.abs(df.indel)
-
+	df.to_csv(bam_file+"."+prefix+".amplicon_mapping.tsv",sep="\t",index=False)
 	overlap = [get_intersection(df.loc[index]['position'], df.loc[index]['position_end'], region_start, region_end)
 			   for index in range(df.shape[0])]
 
@@ -1900,7 +1904,6 @@ def analyze_alignments(dir_sample, amplicon_info, window_size, amplicon_window_a
 
 def rank_amplicon(s):
     """order the amplicon names to remove multi-mapped reads
-
     """
     if "wt_cut" in s:
         return 0
@@ -1925,18 +1928,31 @@ def rank_amplicon(s):
     if "2b_1b_cut" in s:
         return 1    
     return 2
+def get_category(r):
+    if "wt" in r.prefix:
+        if r.overlap>0:
+            return "indel(WT_amplicon)"
+        return "WT_amplicon"
+    return r.prefix
 def get_amplicon_mapped_junction_reads(myDir):
 	files = glob.glob("%s/*amplicon_mapping.tsv"%(myDir))
 	df = pd.concat([pd.read_csv(f,sep="\t") for f in files])
 	df['amplicon_order'] = df.prefix.apply(rank_amplicon)
-	df = df.sort_values("amplicon_order")
-	df2 = df.drop_duplicates("read_name")
-	df3 = df2.drop_duplicates("UMI")
-	df4 = df3.groupby("prefix").size().sort_values().reset_index()
-	df4[1] = df4[0]/df4[0].sum()
-	df4.columns = ['amplicon','#collapsed_read_count',"frequency"]
-	df4['sample'] = files[0].split("/")[-1].split(".sorted.bam")[0]
-	return df4
+	df['position_end'] = df.position + np.abs(df.indel)
+	df = df.reset_index()
+	df['overlap'] = df.apply(lambda r:get_intersection(r.position,r.position_end,r.region_start,r.region_end),axis=1)
+	df = df.sort_values(['AS',"amplicon_order",'overlap'],ascending=[False,True,False])
+	# df = df.sort_values("amplicon_order")
+	# df = df.sort_values(['AS',"amplicon_order"],ascending=[False,True])
+	
+	df = df.drop_duplicates("read_name")
+	df = df.drop_duplicates("UMI")
+	df['category'] = df.apply(get_category,axis=1)
+	df=pd.DataFrame(df.category.value_counts()).reset_index()
+	df.columns = ['amplicon','#collapsed_read_count']
+	df['frequency'] = df['#collapsed_read_count']/df['#collapsed_read_count'].sum()
+	df['sample'] = files[0].split("/")[-1].split(".sorted.bam")[0]
+	return df
 
 ################################################################################
 # Function to calculate the number of reads and collapsed reads aligned to the reference amplicons

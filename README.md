@@ -13,7 +13,7 @@ Optimized version of the original UDITAS program: https://github.com/editasmedic
 
 5. `sample_info.csv`, each sample needs to have 2 gRNA locations.
 
-6. `min_MAPQ` default set to 0 because HBG1/HBG2 multiple alignments. `not read.is_secondary` requirement is removed in `find_indel` function for each amplicon because reads that can be mapped to both wt and other amplicons (due to HBG1/HBG2 duplication, wt sequence is almost identical to large deletion sequence) may have `is_secondary` flag in wt reads, in this case, it would be removed from analysis and thus we would over-estimate the editing outcomes.
+6. `min_MAPQ` default set to 0 because HBG1/HBG2 multiple alignments. `bowtie2 -k` is set to 5. `not read.is_secondary` requirement is removed in `find_indel` function for all amplicons because reads that can be mapped to both wt and other amplicons (due to HBG1/HBG2 duplication, wt sequence is almost identical to large deletion, 1a_1a, 1b_1b, large_inversion) may have `is_secondary` flag in wt reads, in this case, it would be removed from analysis and thus we would over-estimate the editing outcomes.
 
 7. Enhanced documentation.
 

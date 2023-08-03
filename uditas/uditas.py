@@ -57,7 +57,7 @@ def main():
 						help='Window size around cut sites used to create amplicons',
 						default=1000)
 	parser.add_argument("-min_MAPQ", help='Minimum mapping quality to include a read', default=0)
-	parser.add_argument("-min_AS", help='Minimum alignment score to include a read', default=-180)
+	parser.add_argument("-min_AS", help='Minimum alignment score to include a read', default=-100)
 	parser.add_argument("-process_AMP_seq_run", help='Set to 1 to process an AMP-seq run using GUIDE-seq adapters', default=0)
 	# new parameters
 	parser.add_argument("-socrates_path", help='path to socrates 1.13.1 jar', default="/home/yli11/HemTools/share/script/jar/socrates-1.13.1-jar-with-dependencies.jar")
